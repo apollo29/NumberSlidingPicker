@@ -16,7 +16,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.view.ContextThemeWrapper
 import androidx.appcompat.widget.AppCompatImageButton
-import it.sephiroth.android.library.uigestures.*
 import it.sephiroth.android.library.xtooltip.ClosePolicy
 import it.sephiroth.android.library.xtooltip.Tooltip
 import kotlinx.coroutines.Job
@@ -24,7 +23,6 @@ import timber.log.Timber
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sin
 
 class NumberPicker @JvmOverloads constructor(
     context: Context,
@@ -51,11 +49,6 @@ class NumberPicker @JvmOverloads constructor(
     private var editTextStyleId: Int
     private var tooltipStyleId: Int
 
-    private val delegate = UIGestureRecognizerDelegate()
-    private lateinit var longGesture: UILongPressGestureRecognizer
-    private lateinit var tapGesture: UITapGestureRecognizer
-    private var disableGestures: Boolean = false
-
     private var tooltip: Tooltip? = null
     private var maxDistance: Int
 
@@ -64,58 +57,6 @@ class NumberPicker @JvmOverloads constructor(
     private var callback = { newValue: Int -> setProgress(newValue) }
 
     private var buttonIntervalJob: Job? = null
-
-    private val longGestureListener = { it: UIGestureRecognizer ->
-        Timber.i("longGestureListener = ${it.state}")
-        when (it.state) {
-            UIGestureRecognizer.State.Began -> {
-                requestFocus()
-                editText.isSelected = false
-                editText.clearFocus()
-
-                tracker.begin(it.downLocationX, it.downLocationY)
-                startInteraction()
-            }
-            UIGestureRecognizer.State.Ended -> {
-                tracker.end()
-                endInteraction()
-            }
-            UIGestureRecognizer.State.Changed -> {
-                var diff =
-                    if (data.orientation == VERTICAL) it.currentLocationY - it.downLocationY else it.currentLocationX - it.downLocationX
-                if (diff > tracker.minDistance) {
-                    diff = tracker.minDistance
-                } else if (diff < -tracker.minDistance) {
-                    diff = -tracker.minDistance
-                }
-                val final2 = sin((diff / tracker.minDistance) * Math.PI / 2).toFloat()
-
-                tooltip?.let { tooltip ->
-                    when (data.orientation) {
-                        VERTICAL -> tooltip.offsetTo(
-                            tooltip.offsetX,
-                            final2 / 2 * tracker.minDistance
-                        )
-                        HORIZONTAL -> tooltip.offsetTo(
-                            final2 / 2 * tracker.minDistance,
-                            tooltip.offsetY
-                        )
-                    }
-                }
-
-                tracker.addMovement(it.currentLocationX, it.currentLocationY)
-            }
-            else -> {
-            }
-        }
-    }
-
-    private val tapGestureListener = { _: UIGestureRecognizer ->
-        requestFocus()
-        if (!editText.isFocused) {
-            editText.requestFocus()
-        }
-    }
 
     @Suppress("MemberVisibilityCanBePrivate")
     fun setProgress(value: Int, fromUser: Boolean = true) {
@@ -183,8 +124,6 @@ class NumberPicker @JvmOverloads constructor(
                 R.styleable.NumberPicker_picker_tooltipStyle,
                 R.style.NumberPicker_ToolTipStyle
             )
-            disableGestures =
-                array.getBoolean(R.styleable.NumberPicker_picker_disableGestures, false)
             maxDistance = context.resources.getDimensionPixelSize(R.dimen.picker_distance_max)
 
             data = Data(value, minValue, maxValue, stepSize, orientation)
@@ -208,14 +147,11 @@ class NumberPicker @JvmOverloads constructor(
         }
 
         initializeButtonActions()
-        if (!disableGestures) {
-            initializeGestures()
-        }
     }
 
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
-        delegate.isEnabled = enabled
+
     }
 
     private fun hideKeyboard() {
@@ -343,25 +279,6 @@ class NumberPicker @JvmOverloads constructor(
 
     private fun setBackgroundFocused(hasFocus: Boolean) {
         background?.state = if (hasFocus) FOCUSED_STATE_ARRAY else UNFOCUSED_STATE_ARRAY
-    }
-
-    private fun initializeGestures() {
-        longGesture = UILongPressGestureRecognizer(context)
-        longGesture.longPressTimeout = LONG_TAP_TIMEOUT
-        longGesture.actionListener = longGestureListener
-        longGesture.cancelsTouchesInView = false
-
-        tapGesture = UITapGestureRecognizer(context)
-        tapGesture.cancelsTouchesInView = false
-
-        delegate.addGestureRecognizer(longGesture)
-        delegate.addGestureRecognizer(tapGesture)
-
-        tapGesture.actionListener = tapGestureListener
-
-        delegate.isEnabled = isEnabled
-
-        editText.setGestureDelegate(delegate)
     }
 
     private fun startInteraction() {
