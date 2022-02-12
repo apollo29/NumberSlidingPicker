@@ -1,5 +1,12 @@
-include ':app'
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        mavenLocal()
+        maven { url "https://jitpack.io" }
+        jcenter() // Warning: this repository is going to shut down soon
+    }
+}
+rootProject.name = "NumberSlidingPicker"
 include ':numberpicker'
-
-//include ':xtooltip'
-//project(':xtooltip').projectDir = file('../android-target-tooltip/xtooltip')
