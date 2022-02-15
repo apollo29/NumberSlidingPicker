@@ -9,4 +9,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "NumberSlidingPicker"
-include ':numberpicker'
+include ':numberpicker', ':app'
